@@ -112,7 +112,7 @@ int charPosition = 0; // Position of the character being edited (0, 1, or 2)
 char currentPlayerName[4] = {'A', 'A', 'A', '\0'}; 
 
 
-const int nameLength = 3;
+const int nameLength = 3; 
 const int highScore1stNameAddress = 30; 
 const int highScore2ndNameAddress = 34;
 const int highScore3rdNameAddress = 38; 
@@ -135,7 +135,7 @@ void updatePositions();
 void blink(byte x, byte y);
 void blinkFast(byte x, byte y);
 void generateRandomMap(byte matrix[8][8]);
-bool areAllLedsOff(byte matrix[8][8], byte ignoreX, byte ignoreY);
+bool areAllLedsOff(byte ignoreX, byte ignoreY);
 void chooseDifficulty();
 void chooseLightLevelMatrix();
 void matrixLight();
@@ -445,10 +445,20 @@ void handleMatrixOptions() {
 
 
 
-
+byte tempMap[8][8]; 
+void copyMap() {
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            tempMap[i][j] = matrixMap[selectedMap][i][j];
+        }
+    }
+}
 //Start game
 void startGame() {
   int beatenHighScore = 0;
+  xPos = 0;
+  yPos = 0;
+  points = 0;
   boolean shown3rd = false;
   boolean shown2nd = false;
   boolean shown1st = false;
@@ -459,8 +469,13 @@ void startGame() {
   lcd.clear();
   lcd.createChar(0, customChar);
   exitGame = false;
+  boolean copyMatrix = false;
   while (exitGame == false) {
-
+    if(copyMatrix == false){
+      copyMap();
+      updateMatrix();
+      copyMatrix = true;
+    }
     for (int i = 0; i < lives; i++) {
       lcd.setCursor(i, 0);  
       lcd.write((uint8_t) 0);  
@@ -475,6 +490,7 @@ void startGame() {
     boolean currentButtonState = digitalRead(pinSW);
     if(!digitalRead(joyStickBtn)) {
         exitGame = true;
+        copyMatrix = false;
         }
 
     if (currentButtonState != lastButtonState) {
@@ -496,8 +512,8 @@ void startGame() {
       updatePositions();
       
       if ((xLast != xPos || yLast != yPos) && buttonState == true && exist == false) { //i am so dumb forgot to test if the bomb already exist to not be able to put 100 milion bombs...
-        matrixMap[selectedMap][xLast][yLast] = 1;
-        lc.setLed(1, xLast, yLast, matrixMap[selectedMap][xLast][yLast]); //i should use a shallow copy of the matrix i guess when i initialize the game;
+        tempMap[xLast][yLast] = 1;
+        lc.setLed(1, xLast, yLast, tempMap[xLast][yLast]); //i should use a shallow copy of the matrix i guess when i initialize the game;
         lastPositionSetTime = millis();
         exist = true;
         xBlink = xLast;
@@ -513,16 +529,16 @@ void startGame() {
       
       if (exist && millis() - lastPositionSetTime > 3000) {
         
-        matrixMap[selectedMap][xBlink][yBlink] = 0;
-        lc.setLed(1, xBlink, yBlink, matrixMap[selectedMap][xBlink][yBlink]);
+        tempMap[xBlink][yBlink] = 0;
+        lc.setLed(1, xBlink, yBlink, tempMap[xBlink][yBlink]);
 
         if (xBlink > 0) {
           //destroy the walls
-          if(matrixMap[selectedMap][xBlink-1][yBlink] == 1){
+          if(tempMap[xBlink-1][yBlink] == 1){
           points = points + 10/selectedDifficulty;
           }
-          matrixMap[selectedMap][xBlink - 1][yBlink] = 0;
-          lc.setLed(1, xBlink - 1, yBlink, matrixMap[selectedMap][xBlink - 1][yBlink]);
+          tempMap[xBlink - 1][yBlink] = 0;
+          lc.setLed(1, xBlink - 1, yBlink, tempMap[xBlink - 1][yBlink]);
 
         //you die if you stand too close to the bomb and you go back to spawn;
           if (xPos == xBlink - 1 && yBlink == yPos) {
@@ -532,12 +548,12 @@ void startGame() {
       }
 
       if (xBlink < (8 - 1)) {
-        if( matrixMap[selectedMap][xBlink + 1][yBlink] == 1){
+        if( tempMap[xBlink + 1][yBlink] == 1){
           points = points + 10/selectedDifficulty;
 
           }
-          matrixMap[selectedMap][xBlink + 1][yBlink] = 0;
-          lc.setLed(1, xBlink + 1, yBlink, matrixMap[selectedMap][xBlink + 1][yBlink]);
+          tempMap[xBlink + 1][yBlink] = 0;
+          lc.setLed(1, xBlink + 1, yBlink, tempMap[xBlink + 1][yBlink]);
 
           if (xPos == xBlink + 1 && yBlink == yPos) {
               handlePlayerRespawn();
@@ -545,11 +561,11 @@ void startGame() {
       }
 
         if (yBlink > 0) {
-          if(matrixMap[selectedMap][xBlink][yBlink - 1] == 1){
+          if(tempMap[xBlink][yBlink - 1] == 1){
            points = points + 10/selectedDifficulty;
           }
-          matrixMap[selectedMap][xBlink][yBlink - 1] = 0;
-          lc.setLed(1, xBlink, yBlink - 1, matrixMap[selectedMap][xBlink][yBlink - 1]);
+          tempMap[xBlink][yBlink - 1] = 0;
+          lc.setLed(1, xBlink, yBlink - 1, tempMap[xBlink][yBlink - 1]);
 
           if (xPos == xBlink && yBlink - 1 == yPos) {
             handlePlayerRespawn();
@@ -557,11 +573,11 @@ void startGame() {
         }
 
         if (yBlink < (8 - 1)) {
-          if(matrixMap[selectedMap][xBlink][yBlink + 1] == 1){
+          if(tempMap[xBlink][yBlink + 1] == 1){
           points = points + 10/selectedDifficulty;
           }
-          matrixMap[selectedMap][xBlink][yBlink + 1] = 0;
-          lc.setLed(1, xBlink, yBlink + 1, matrixMap[selectedMap][xBlink][yBlink + 1]);
+          tempMap[xBlink][yBlink + 1] = 0;
+          lc.setLed(1, xBlink, yBlink + 1, tempMap[xBlink][yBlink + 1]);
 
           if (xPos == xBlink && yBlink + 1 == yPos) {
             handlePlayerRespawn();
@@ -632,7 +648,7 @@ void startGame() {
           if(selectedMap > 2){
             selectedMap = 0;
           }
-          updateMatrix();
+          copyMatrix = false;
           points = 0; 
         while (exitThisThing == false){
           while(!digitalRead(joyStickBtn)) {
@@ -642,7 +658,8 @@ void startGame() {
         lcd.clear();
             
         }
-    if (areAllLedsOff(matrixMap[selectedMap], xPos, yPos)) {
+    if (areAllLedsOff(xPos, yPos)) {
+          copyMatrix = false;
           selectedMap++;
           if(selectedMap > 2){
             selectedMap = 0;
@@ -714,7 +731,9 @@ void startGame() {
             selectedMap = 0;
             lives = selectedDifficulty;
             points = 0;
+            copyMatrix = false;
             updateMatrix();
+            
         }
     
     }
@@ -1382,10 +1401,11 @@ void showCredits() {
 void updateMatrix() {
   for (int row = 0; row < matrixSize; row++) {
     for (int col = 0; col < matrixSize; col++) {
-      lc.setLed(0, row, col, matrixMap[selectedMap][row][col]);
+      lc.setLed(0, row, col, tempMap[row][col]);
     }
   }
 }
+
 
 void playBuzzer() {
 tone(buzzerPin, 500,250);
@@ -1415,10 +1435,10 @@ void updatePositions() {
     hasMoved = true;
   }
 
-  if (matrixMap[selectedMap][newXPos][newYPos] == 0 && hasMoved) {
+  if (tempMap[newXPos][newYPos] == 0 && hasMoved) {
     matrixChanged = true;
-    matrixMap[selectedMap][xPos][yPos] = 0;
-    matrixMap[selectedMap][newXPos][newYPos] = 1;
+    tempMap[xPos][yPos] = 0;
+    tempMap[newXPos][newYPos] = 1;
     xLast = xPos;
     yLast = yPos;
     xPos = newXPos;
@@ -1463,16 +1483,17 @@ void generateRandomMap(byte matrix[8][8]) {
   matrix[2][0] = 0;
 }
 
-bool areAllLedsOff(byte matrix[8][8], byte ignoreX, byte ignoreY) {
+bool areAllLedsOff(byte ignoreX, byte ignoreY) {
   for (int row = 0; row < 8; row++) {
     for (int col = 0; col < 8; col++) {
-      if ((row != ignoreX || col != ignoreY) && matrix[row][col] != 0) {
+      if ((row != ignoreX || col != ignoreY) && tempMap[row][col] != 0) {
         return false;
       }
     }
   }
   return true;
 }
+
 
 void showHighScores() {
   char nameBuffer[nameLength + 1]; //
@@ -1507,9 +1528,6 @@ void showHighScores() {
   lcd.print(nameBuffer);
   delay(1500);
 }
-
-
-
 
 
 void showHowToPlay(){
@@ -1563,7 +1581,6 @@ void showHowToPlay(){
 
 
 }
-
 
 
 void saveNameToEEPROM() {
