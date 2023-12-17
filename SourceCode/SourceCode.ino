@@ -1,4 +1,4 @@
-//redo maps + random + setName for everyHighScore and it is done
+//To do: menu sound, combos, maps,better icons/ tutorial?
 #include <LiquidCrystal.h>
 #include <EEPROM.h>
 #include "LedControl.h"
@@ -130,7 +130,7 @@ void displayGameOptions();
 void setup();
 void loop();
 void updateMatrix();
-void playBuzzer();
+void playBombSound();
 void updatePositions();
 void blink(byte x, byte y);
 void blinkFast(byte x, byte y);
@@ -213,6 +213,9 @@ void loop() {
 
   if (joyValue < minThreshold) {
     currentMenu++;
+    if(allowSound){
+      playMenuSound();
+    }
     updateMenu();
     delay(debounceDelay);
     while (analogRead(xPin) < minThreshold);
@@ -220,6 +223,9 @@ void loop() {
 
   if (joyValue > maxThreshold) {
     currentMenu--;
+    if(allowSound){
+      playMenuSound();
+    }
     updateMenu();
     delay(debounceDelay);
     while (analogRead(xPin) > maxThreshold);
@@ -238,8 +244,14 @@ void loop() {
 
 //Update display based on the joystick inpus
 void updateMenu() {
-  if (currentMenu < menuStart) currentMenu = menuhowToPlay;
-  if (currentMenu > menuhowToPlay) currentMenu = menuStart;
+  if (currentMenu < menuStart){ currentMenu = menuhowToPlay;
+      if(allowSound){playMenuSound();
+        }
+      }
+  if (currentMenu > menuhowToPlay){
+    currentMenu = menuStart;
+    if(allowSound){playMenuSound();}
+  } 
 
   lcd.clear();
 
@@ -305,6 +317,7 @@ void handleGameSettings(){
 
     if (joyValue < minThreshold) {
       subMenu++;
+    if(allowSound){playMenuSound();}
       displayGameSettings();
       delay(debounceDelay);
       while (analogRead(xPin) < minThreshold);
@@ -312,6 +325,7 @@ void handleGameSettings(){
 
     if (joyValue > maxThreshold) {
       subMenu--;
+      if(allowSound){playMenuSound();}
       displayGameSettings();
       delay(debounceDelay);
       while (analogRead(xPin) > maxThreshold);
@@ -327,9 +341,10 @@ void handleGameSettings(){
   }
 }
 void displayGameSettings(){
-  if (subMenu < 1) subMenu = 7;
+  if (subMenu < 1){ subMenu = 7; if(allowSound){playMenuSound();}}
   if (subMenu > 7 && subMenu != 9) {
     subMenu = 1;
+    if(allowSound){playMenuSound();}
   }
   if(subMenu > 9) subMenu = 1;
   
@@ -380,13 +395,16 @@ void displayGameSettings(){
 void executeGameSettingsAction(){
   switch(subMenu){
     case 1:
-      handleMatrixOptions();
+      //handleMatrixOptions();
+    chooseLightLevelMatrix();
       break;
     case 2:
-      handleLcdOptions();
+    //handleLcdOptions();
+    chooseLightLevelLcd();
       break;
     case 3:
-      handleSoundOptions();
+    //handleSoundOptions();
+      chooseSoundOption();
       break;
     case 4:
       handleHighScoreOptions();
@@ -586,7 +604,7 @@ void startGame() {
 
         exist = false;
         if(allowSound == true){
-          playBuzzer();
+          playBombSound();
         }
         updateMatrix();
     }
@@ -821,6 +839,7 @@ void displayGameOptions() {
       lcd.setCursor(0, 1);
       lcd.print(F(" Exit"));
       break;
+    //here i should make it lives, bomb time, ??
     case 2:
       lcd.print(" Difficulty");
       lcd.setCursor(0, 1);
@@ -848,7 +867,7 @@ void executeGameMenuAction() {
 
 void chooseDifficulty() {
   lcd.clear();
-  lcd.print(F("Set Difficulty"));
+  lcd.print(F("Difficulty"));
   boolean exitThis = false;
   while (exitThis == false) { 
     int joyValue = analogRead(xPin);
@@ -861,7 +880,7 @@ void chooseDifficulty() {
         selectedDifficulty = 10;
       }
       lcd.setCursor(0, 0);
-      lcd.print(F("Set Difficulty"));
+      lcd.print(F("Difficulty"));
       lcd.setCursor(0, 1);
       lcd.print(selectedDifficulty);
       delay(debounceDelay);
@@ -875,7 +894,7 @@ void chooseDifficulty() {
         selectedDifficulty = 1;
       }
         lcd.setCursor(0, 0);
-      lcd.print(F("Set Difficulty"));
+      lcd.print(F("Difficulty"));
       lcd.setCursor(0, 1);
       lcd.print(selectedDifficulty);
       delay(debounceDelay);
@@ -1075,10 +1094,11 @@ void chooseLightLevelLcd(){
      if(!digitalRead(joyStickBtn)) {
       exitThis = true;
       }
+//thse values gave me a headache why when i used 10-30 the values are random it becomes brighter when the value is lower??? but for 20 it works what?
     if (joyValue < minThreshold) {
-      lcdBrightness += 100;
-      if (lcdBrightness > 1000) {
-        lcdBrightness = 1000;
+      lcdBrightness += 20;
+      if (lcdBrightness > 200) {
+        lcdBrightness = 200;
       }
       lcd.setCursor(0, 0);
       lcd.print(F("Set Brightness"));
@@ -1089,10 +1109,10 @@ void chooseLightLevelLcd(){
     }
 
     if (joyValue > maxThreshold) {
-      lcdBrightness -= 100;
+      lcdBrightness -= 20;
       lcd.clear();
-      if (lcdBrightness < 100) {
-        lcdBrightness = 100;
+      if (lcdBrightness < 20) {
+        lcdBrightness = 20;
       }
       lcd.setCursor(0, 0);
       lcd.print(F("Set Brightness"));
@@ -1106,7 +1126,7 @@ void chooseLightLevelLcd(){
     }
   analogWrite(Apin, lcdBrightness);  
  
-  delay(1000); 
+  delay(500); 
 }
 
 //Sound off/on:
@@ -1114,7 +1134,7 @@ void handleSoundOptions(){
   lcd.clear();
   subMenu = 4;
   exitMenu = false;
-  displayLcdOptions();
+  displaySoundOptions();
   
   while (!exitMenu) {
     int joyValue = analogRead(xPin);
@@ -1212,7 +1232,7 @@ void chooseSoundOption() {
     }
 
     if (allowSound) {
-      playBuzzer();
+      playBombSound();
     }
   }
   EEPROM.write(7, allowSound);
@@ -1407,10 +1427,13 @@ void updateMatrix() {
 }
 
 
-void playBuzzer() {
-tone(buzzerPin, 500,250);
+void playBombSound() {
+tone(buzzerPin, 800,350); //bomb sound
 }
 
+void playMenuSound(){
+tone(buzzerPin, 500, 200);
+}
 void updatePositions() {
   static bool hasMoved = false; // Declare as static
 
@@ -1463,7 +1486,7 @@ void blink(byte x, byte y ) {
 void blinkFast(byte x, byte y) {
   static unsigned long lastBlinkTime = 0;
   static bool isOn = true;
-  static unsigned blinkInterval =150;
+  static unsigned blinkInterval = 150;
   if (millis() - lastBlinkTime >= blinkInterval) {
     isOn = !isOn;
     lc.setLed(0, x, y, isOn);
