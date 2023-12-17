@@ -1,4 +1,4 @@
-//To do: menu sound, combos, maps,better icons/ tutorial?
+//To do:combos, maps,better icons/ tutorial?
 #include <LiquidCrystal.h>
 #include <EEPROM.h>
 #include "LedControl.h"
@@ -41,7 +41,7 @@ byte matrixMap[numMaps][8][8] = {
 }
 };
 
-byte customChar[8] = {
+byte life[8] = {
 	0b01110,
 	0b01110,
 	0b00100,
@@ -52,6 +52,79 @@ byte customChar[8] = {
 	0b01010
 };
 
+byte startGameIcon[8] = {
+	0b00000,
+	0b01110,
+	0b00100,
+	0b00100,
+	0b00100,
+	0b11111,
+	0b11111,
+	0b11111
+};
+
+byte settingIcon[8] = {
+	0b01010,
+	0b01010,
+	0b01110,
+	0b00100,
+	0b00100,
+	0b00100,
+	0b00100,
+	0b00100
+};
+
+byte heartIcon[8] = {
+  B00000,
+  B01010,
+  B11111,
+  B11111,
+  B01110,
+  B00100,
+  B00000,
+  B00000
+};
+byte highScoreIcon[8] = {
+	0b11111,
+	0b10001,
+	0b10001,
+	0b01110,
+	0b00100,
+	0b00100,
+	0b01110,
+	0b11111
+};
+byte questionMarkIcon[8] = {
+	0b11110,
+	0b10010,
+	0b10010,
+	0b00010,
+	0b00010,
+	0b00000,
+	0b00010,
+	0b00000
+};
+
+byte soundIcon[8] = {
+	0b00000,
+	0b01110,
+	0b01010,
+	0b01010,
+	0b01010,
+	0b01011,
+	0b11011,
+	0b11000
+};
+byte matrix[8] = {
+	0b10101,
+	0b01010,
+	0b10101,
+	0b01010,
+	0b10101,
+	0b01010,
+	0b10101,
+	0b01010
+};
 byte matrixSize = 8;
 byte xPos = 0;
 byte yPos = 0;
@@ -200,6 +273,11 @@ void setup() {
   }
   EEPROM.write(3, selectedMap); 
   
+  lcd.createChar(1, startGameIcon);
+  lcd.createChar(2, settingIcon);
+  lcd.createChar(3, heartIcon);
+  lcd.createChar(4, highScoreIcon);
+  lcd.createChar(5,questionMarkIcon);
   updateMenu();
 }
 
@@ -257,27 +335,50 @@ void updateMenu() {
 
   switch (currentMenu) {
     case menuStart:
+      lcd.setCursor(0, 0);
       lcd.print(F(">START"));
-      lcd.setCursor(0, 1);
+      lcd.setCursor(7, 0);
+      lcd.write((uint8_t)1);
+      lcd.setCursor(0, 1);//starGame icon
       lcd.print(F(" SETTINGS"));
+      lcd.setCursor(10,2);
+      lcd.write((uint8_t)2);
       break;
     case menuSettings:
+      lcd.setCursor(0, 0);
       lcd.print(F(" START"));
+      lcd.setCursor(7, 0);
+      lcd.write((uint8_t)1);
       lcd.setCursor(0, 1);
       lcd.print(F(">SETTINGS"));
+      lcd.setCursor(10,2);
+      lcd.write((uint8_t)2);
       break;
     case menuCredits:
+      lcd.setCursor(0, 0);
       lcd.print(F(">CREDITS"));
+      lcd.setCursor(9, 0);
+      lcd.write((uint8_t)3);
       lcd.setCursor(0,1);
       lcd.print(F(" HIGHSCORES"));
+      lcd.setCursor(12, 1);
+      lcd.write((uint8_t)4);
       break;
     case menuHighScore:
-    lcd.print(F(" CREDITS"));
-    lcd.setCursor(0,1);
-    lcd.print(F(">HIGHSCORES"));
+      lcd.setCursor(0, 0);
+      lcd.print(F(" CREDITS"));
+      lcd.setCursor(9, 0);
+      lcd.write((uint8_t)3);
+      lcd.setCursor(0,1);
+      lcd.print(F(">HIGHSCORES"));
+      lcd.setCursor(12, 1);
+      lcd.write((uint8_t)4);
     break;
     case menuhowToPlay:
+    lcd.setCursor(0, 0);
     lcd.print(F(">HOW TO PLAY"));
+    lcd.setCursor(13,0);
+    lcd.write((uint8_t)5);
     break;
 
   }
@@ -471,6 +572,36 @@ void copyMap() {
         }
     }
 }
+
+void generateMap() {
+    int maxBlocks;
+    if (selectedDifficulty < 4) {
+        maxBlocks = 20;
+    } else if (selectedDifficulty < 8 && selectedDifficulty > 3 ) {
+        maxBlocks = 30;
+    } else {
+        maxBlocks = 45;
+    }
+
+    // Initialize map with zeros
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            tempMap[i][j] = 0;
+        }
+    }
+
+    // Randomly place blocks
+    int blocks = 0;
+    while (blocks < maxBlocks) {
+        int x = random(8);
+        int y = random(8);
+        if ((x != 0 || y != 1) && (x != 1 || y != 0) && tempMap[x][y] == 0) {
+            tempMap[x][y] = 1;
+            blocks++;
+        }
+    }
+}
+
 //Start game
 void startGame() {
   int beatenHighScore = 0;
@@ -485,12 +616,12 @@ void startGame() {
   lcd.print("LOADING...");
   delay(400);
   lcd.clear();
-  lcd.createChar(0, customChar);
+  lcd.createChar(0, life);
   exitGame = false;
   boolean copyMatrix = false;
   while (exitGame == false) {
     if(copyMatrix == false){
-      copyMap();
+      generateMap();
       updateMatrix();
       copyMatrix = true;
     }
@@ -1091,11 +1222,12 @@ void chooseLightLevelLcd(){
   boolean exitThis = false;
   while (exitThis == false) { 
     int joyValue = analogRead(xPin);
+    boolean moved = false;
      if(!digitalRead(joyStickBtn)) {
       exitThis = true;
       }
 //thse values gave me a headache why when i used 10-30 the values are random it becomes brighter when the value is lower??? but for 20 it works what?
-    if (joyValue < minThreshold) {
+    if (joyValue < minThreshold && moved == false) {
       lcdBrightness += 20;
       if (lcdBrightness > 200) {
         lcdBrightness = 200;
@@ -1106,9 +1238,10 @@ void chooseLightLevelLcd(){
       lcd.print(lcdBrightness);
       delay(debounceDelay);
       while (analogRead(xPin) < minThreshold);
+      moved = true;
     }
 
-    if (joyValue > maxThreshold) {
+    if (joyValue > maxThreshold  && moved == false) {
       lcdBrightness -= 20;
       lcd.clear();
       if (lcdBrightness < 20) {
@@ -1119,11 +1252,13 @@ void chooseLightLevelLcd(){
       lcd.setCursor(0, 1);
       lcd.print(lcdBrightness);
       delay(debounceDelay);
+      moved = true;
       while (analogRead(xPin) > maxThreshold);
 
     }
-    EEPROM.write(2, lcdBrightness);
+    analogWrite(Apin, lcdBrightness);  
     }
+  EEPROM.write(2, lcdBrightness);
   analogWrite(Apin, lcdBrightness);  
  
   delay(500); 
@@ -1602,9 +1737,7 @@ void showHowToPlay(){
     delay(250);  
   }
 
-
 }
-
 
 void saveNameToEEPROM() {
   for (int i = 0; i < 3; ++i) {
