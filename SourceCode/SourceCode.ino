@@ -698,6 +698,7 @@ void startGame() {
       lcd.setCursor(0, 0);
       lcd.print(F("You died"));
       if (points > highScore1st) {
+        highScore1st = points;
         saveHighScoreNameToEEPROM(highScore1stNameAddress, currentPlayerName);
       }
       delay(1000);
@@ -786,6 +787,7 @@ void startGame() {
         lcd.setCursor(0, 0);
         lcd.print(F("You won!"));
         if (points > highScore1st) {
+          highScore1st = points;
           saveHighScoreNameToEEPROM(highScore1stNameAddress, currentPlayerName);
         }
         lcd.setCursor(0, 1);
@@ -1485,12 +1487,10 @@ void showCredits() {
     lcd.scrollDisplayLeft();
     delay(250);
   }
-
-  lcd.clear();
-  lcd.print(F("High Score:"));
-  lcd.setCursor(0, 1);
-  lcd.print(highScore);
-  delay(3500);
+lcd.clear();
+  lcd.setCursor(0, 0);
+lcd.print(F("Hope you like it!"));
+  delay(1500);
 }
 
 
