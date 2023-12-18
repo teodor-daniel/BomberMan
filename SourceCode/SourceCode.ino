@@ -297,7 +297,7 @@ void updateMenu() {
       lcd.setCursor(0, 1);  //starGame icon
       lcd.print(F(" SETTINGS"));
       lcd.setCursor(10, 1);
-      lcd.write((uint8_t)1);  //setting icon
+      lcd.write((uint8_t)2);  //setting icon
       lcd.setCursor(15, 1);
       lcd.write((uint8_t)7);
 
@@ -310,7 +310,7 @@ void updateMenu() {
       lcd.setCursor(0, 1);
       lcd.print(F(">SETTINGS"));
       lcd.setCursor(10, 1);
-      lcd.write((uint8_t)1);
+      lcd.write((uint8_t)2);
       lcd.setCursor(15, 1);
       lcd.write((uint8_t)7);
       break;
