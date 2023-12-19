@@ -2,7 +2,10 @@
 
 ## Overview
 This is a Bomberman like game developed as a third-year computer engineering project. This Arduino-based game combines strategy, quick thinking, and a bit of luck. Players navigate through a matrix, place bombs to destroy walls, and avoid getting caught in the blast radius. The project involves hardware components like an LED matrix, joystick, buttons, and an LCD display, along with software written in C++ for the Arduino platform.
-## Picture of the final design...
+## Picture of the final design
+  <p align = center>
+  <img src="FinalBuild.jpeg">
+  </p>
 ## Backstory
 
 **Game Story:** My recreation of the classic Bomberman game using Arduino is more than just a project; it's a tribute to my first encounter with video gaming. This game holds a special place in my heart, tracing back to when I was just 4 years old. My first gaming experience was on my father's work computer, where an internet provider's CD introduced me to four iconic games: Bomberman, Heroes III, Dungeon Siege, and Red Alert 2.
