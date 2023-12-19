@@ -110,7 +110,7 @@ byte xLastPos = 0;
 byte yLastPos = 0;
 const int buzzerPin = 13;
 unsigned long lastButtonPressTime = 0;
-const byte moveInterval = 100;
+const byte moveInterval = 150;
 unsigned long long lastMoved = 0;
 bool matrixChanged = true;
 int xLast;
@@ -531,6 +531,9 @@ void startGame() {
   exitGame = false;
   boolean copyMatrix = false;
   while (exitGame == false) {
+    if (!digitalRead(joyStickBtn)) {
+      exitGame = true;
+    }
     if (copyMatrix == false) {
       generateMap();
       updateMatrix();
@@ -555,7 +558,7 @@ void startGame() {
       xLast = xPos;
       yLast = yPos;
       updatePositions();
-      if ((xLast != xPos || yLast != yPos)  && exist == false && buttonPressed == LOW) {
+      if ((xLast != xPos || yLast != yPos) && exist == false && buttonPressed == LOW) {
         tempMap[xLast][yLast] = 1;
         lc.setLed(1, xLast, yLast, tempMap[xLast][yLast]);
         lastPositionSetTime = millis();
@@ -626,8 +629,11 @@ void startGame() {
       }
 
       exist = false;
-      if (allowSound == true) {
+      if (allowSound) {
         playBombSound();
+      }
+      if (allowFasterBombs) {
+        points += 2;
       }
       updateMatrix();
     }
@@ -700,6 +706,12 @@ void startGame() {
       if (points > highScore1st) {
         highScore1st = points;
         saveHighScoreNameToEEPROM(highScore1stNameAddress, currentPlayerName);
+      } else if (points > highScore2nd && points < highScore1st) {
+        highScore2nd = points;
+        saveHighScoreNameToEEPROM(highScore2ndNameAddress, currentPlayerName);
+      } else if (points > highScore3rd && points < highScore2nd) {
+        highScore2nd = points;
+        saveHighScoreNameToEEPROM(highScore3rdNameAddress, currentPlayerName);
       }
       delay(1000);
       lcd.clear();
@@ -786,10 +798,16 @@ void startGame() {
         boolean exitThisThing = false;
         lcd.setCursor(0, 0);
         lcd.print(F("You won!"));
-        if (points > highScore1st) {
-          highScore1st = points;
-          saveHighScoreNameToEEPROM(highScore1stNameAddress, currentPlayerName);
-        }
+      if (points > highScore1st) {
+        highScore1st = points;
+        saveHighScoreNameToEEPROM(highScore1stNameAddress, currentPlayerName);
+      } else if (points > highScore2nd && points < highScore1st) {
+        highScore2nd = points;
+        saveHighScoreNameToEEPROM(highScore2ndNameAddress, currentPlayerName);
+      } else if (points > highScore3rd && points < highScore2nd) {
+        highScore3rd = points;
+        saveHighScoreNameToEEPROM(highScore3rdNameAddress, currentPlayerName);
+      }
         lcd.setCursor(0, 1);
         lcd.print("Score:");
         lcd.setCursor(8, 1);
@@ -987,7 +1005,7 @@ void chooseDifficulty() {
       exitThis = true;
     }
     if (joyValue < minThreshold) {
-        lcd.clear();
+      lcd.clear();
       selectedDifficulty++;
       if (selectedDifficulty > 10) {
         selectedDifficulty = 10;
@@ -1014,7 +1032,7 @@ void chooseDifficulty() {
       if (selectedDifficulty < 1) {
         selectedDifficulty = 1;
       }
-          lcd.setCursor(0, 0);
+      lcd.setCursor(0, 0);
       if (selectedDifficulty < 4) {
         lcd.print(F("Game Mode-Hard  "));
       } else if (selectedDifficulty > 3 && selectedDifficulty < 8) {
@@ -1487,9 +1505,9 @@ void showCredits() {
     lcd.scrollDisplayLeft();
     delay(250);
   }
-lcd.clear();
+  lcd.clear();
   lcd.setCursor(0, 0);
-lcd.print(F("Hope you like it!"));
+  lcd.print(F("Hope you like it!"));
   delay(1500);
 }
 
@@ -1628,7 +1646,7 @@ void showHowToPlay() {
   xPos = 4;
   yPos = 4;
   generateTutorial();
-        updateMatrix();
+  updateMatrix();
 
   while (count < 3) {
 
@@ -1719,29 +1737,22 @@ void showHowToPlay() {
   lcd.clear();
   lcd.print("Blow the walls!");
   count = 0;
+
+
+
   while (count < 3) {
-    boolean currentButtonState = digitalRead(pinSW);
-    if (currentButtonState != lastButtonState) {
-      lastButtonPressTime = millis();
-    }
-    if ((millis() - lastButtonPressTime) > debounceDelay) {
-      if (currentButtonState == LOW) {
-        buttonState = !buttonState;
-      }
-    }
-    lastButtonState = currentButtonState;
+    bool buttonPressed = digitalRead(pinSW);
     if (millis() - lastMoved >= moveInterval) {
       xLast = xPos;
       yLast = yPos;
       updatePositions();
-      if ((xLast != xPos || yLast != yPos) && buttonState == true && exist == false) {
+      if ((xLast != xPos || yLast != yPos) && exist == false && buttonPressed == LOW) {
         tempMap[xLast][yLast] = 1;
         lc.setLed(1, xLast, yLast, tempMap[xLast][yLast]);
         lastPositionSetTime = millis();
         exist = true;
         xBlink = xLast;
         yBlink = yLast;
-        buttonState = false;
       }
       lastMoved = millis();
     }
@@ -1830,7 +1841,7 @@ void showHowToPlay() {
       }
 
       exist = false;
-      if (allowSound == true) {
+      if (allowSound) {
         playBombSound();
       }
       updateMatrix();
