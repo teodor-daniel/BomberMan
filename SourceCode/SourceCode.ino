@@ -131,7 +131,7 @@ const int xPin = A0;
 const int yPin = A1;
 const int pinSW = 2;
 const int joyStickBtn = A2;
-const int minThreshold = 300;
+const int minThreshold = 400;
 const int maxThreshold = 600;
 const int debounceDelay = 80;
 const int menuStart = 1;
@@ -167,35 +167,6 @@ const int highScore1stNameAddress = 30;
 const int highScore2ndNameAddress = 34;
 const int highScore3rdNameAddress = 38;
 
-//All the functions
-void updateMenu();
-void executeAction();
-void startGame();
-void handleGameOptions();
-// void handleMatrixOptions();
-// void handleLcdOptions();
-void showCredits();
-void executeGameMenuAction();
-void displayGameOptions();
-void setup();
-void loop();
-void updateMatrix();
-void playBombSound();
-void updatePositions();
-void blink(byte x, byte y);
-void blinkFast(byte x, byte y);
-bool areAllLedsOff(byte ignoreX, byte ignoreY);
-void chooseDifficulty();
-void chooseLightLevelMatrix();
-void matrixLight();
-void executeMatrixMenuAction();
-void chooseLightLevelLcd();
-void displayLcdOptions();
-void executeLcdMenuAction();
-void showCredits();
-void handlePlayerRespawn();
-void saveNameToEEPROM();
-void loadNameFromEEPROM();
 
 void setup() {
   Serial.begin(9600);
