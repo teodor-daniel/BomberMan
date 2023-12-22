@@ -1,4 +1,9 @@
-#include <LiquidCrystal.h>
+/*
+Regrettably, this program relies on 'delay' and blocking 'while' loops, potentially impeding multitasking and responsiveness due to global scope obstruction. However, within this particular application, the absence of multitasking aligns with the design intent, as each section operates autonomously, ensuring a methodical progression from one task to the next. This approach fosters a deliberate and orderly execution, befitting the game's straightforward and linear nature.
+Acknowledging the  recurrent use of variables,  especially in controller initialization it's important to note that this strategy was deliberately employed to reduce complexity and uphold a uniform code structure 
+Moreover, current memory utilization stands at 58%, indicating a moderate consumption level. Introducing a more complex system of flags to track the player's menu position could unnecessarily inflate variable usage and memory demand. The chosen methodology, therefore, strikes a balance between functionality and resource efficiency, offering a pragmatic solution for the game's scale and scope.
+ */
+
 #include <EEPROM.h>
 #include "LedControl.h"
 const int dinPin = 12;
@@ -320,16 +325,15 @@ void updateMenu() {
   }
 }
 
-//Switch for the actions
+//Switch for the actions based on the action either go into a new menu like handleGameSettings, or start the game/tutorial or show credits/highscore
 void executeAction() {
   switch (currentMenu) {
     case menuStart:
       startGame();
       lcd.createChar(0, topArrow);
       break;
-      //Here i put handleSettings that has exit, but also has all the handles expect credtis.
     case menuSettings:
-      handleGameSettings();  //new menu
+      handleGameSettings();
       break;
     case menuCredits:
       showCredits();  //display to the screen
@@ -343,7 +347,7 @@ void executeAction() {
   }
 }
 
-//Settings
+//Settings wait for the player to select a setting, have to use button on exit to leave
 void handleGameSettings() {
   lcd.clear();
   subMenu = 9;
@@ -381,6 +385,7 @@ void handleGameSettings() {
     }
   }
 }
+//here is the display
 void displayGameSettings() {
   if (subMenu < 1) {
     subMenu = 7;
@@ -390,6 +395,7 @@ void displayGameSettings() {
     subMenu = 1;
     if (allowSound) { playMenuSound(); }
   }
+  //trick to no immediately go into the first option, as the program will wait for the next input, 
   if (subMenu > 9) subMenu = 1;
 
   lcd.clear();
@@ -463,7 +469,7 @@ void executeGameSettingsAction() {
       chooseSoundOption();
       break;
     case 4:
-      handleHighScoreOptions();
+      chooseHighScoreOption();
       break;
     case 5:
       handleChooseName();
@@ -486,6 +492,7 @@ void executeGameSettingsAction() {
 
 //Start game
 void startGame() {
+  //reinitialize the values to default.
   int beatenHighScore = 0;
   xPos = 0;
   yPos = 0;
@@ -502,19 +509,19 @@ void startGame() {
   exitGame = false;
   boolean copyMatrix = false;
   while (exitGame == false) {
-    if (!digitalRead(joyStickBtn)) {
+    if (!digitalRead(joyStickBtn)) {//quick exit the game.
       exitGame = true;
     }
     if (copyMatrix == false) {
-      generateMap();
+      generateMap();//verify the map has been generated 
       updateMatrix();
       copyMatrix = true;
     }
-    for (int i = 0; i < lives; i++) {
+    for (int i = 0; i < lives; i++) {//place the lives on the lcd.
       lcd.setCursor(i, 0);
       lcd.write((uint8_t)0);
     }
-    if (allowFasterBombs == true && selectedDifficulty == 1) {
+    if (allowFasterBombs == true && selectedDifficulty == 1) {//if the player plays on the hardest mode easter egg.
       lcd.write((uint8_t)6);
     }
     lcd.setCursor(0, 1);
@@ -525,41 +532,38 @@ void startGame() {
     lcd.print(currentPlayerName);
 
     bool buttonPressed = digitalRead(pinSW);
-    if (millis() - lastMoved >= moveInterval) {
-      xLast = xPos;
-      yLast = yPos;
-      updatePositions();
-      if ((xLast != xPos || yLast != yPos) && exist == false && buttonPressed == LOW) {
-        tempMap[xLast][yLast] = 1;
+    if (millis() - lastMoved >= moveInterval) {//how fast is the player moving,
+      updatePositions();//update the position of the player, on the matrix
+      if ((xLast != xPos || yLast != yPos) && exist == false && buttonPressed == LOW) { // if the player moved and he pressed the bomb button, and the bomb does not exit,
+        tempMap[xLast][yLast] = 1;//set the last position on (create the bomb)
         lc.setLed(1, xLast, yLast, tempMap[xLast][yLast]);
-        lastPositionSetTime = millis();
-        exist = true;
-        xBlink = xLast;
+        lastPositionSetTime = millis();//start a timmer fot he bomb
+        exist = true;//set that it exists
+        xBlink = xLast;//set bomb location for the blink fast function
         yBlink = yLast;
       }
-      lastMoved = millis();
+      lastMoved = millis();//start the counter for lastMoved, 
     }
     //bomb starts blinking if it exists
     if (exist) {
       blinkFast(xBlink, yBlink);
     }
 
-    if (exist && millis() - lastPositionSetTime > timeForBomb) {
-
-      tempMap[xBlink][yBlink] = 0;
+    if (exist && millis() - lastPositionSetTime > timeForBomb) {//if the bomb exists the timmer will start and once the timmer for the bomb is over
+      tempMap[xBlink][yBlink] = 0;//remove the current bomb
       lc.setLed(1, xBlink, yBlink, tempMap[xBlink][yBlink]);
 
       if (xBlink > 0) {
-        //destroy the walls
+        
         if (tempMap[xBlink - 1][yBlink] == 1) {
-          points = points + 10 / selectedDifficulty;
+          points = points + 10 / selectedDifficulty;//add points
         }
-        tempMap[xBlink - 1][yBlink] = 0;
+        tempMap[xBlink - 1][yBlink] = 0;//destroy the walls
         lc.setLed(1, xBlink - 1, yBlink, tempMap[xBlink - 1][yBlink]);
 
         //you die if you stand too close to the bomb and you go back to spawn;
         if (xPos == xBlink - 1 && yBlink == yPos) {
-          handlePlayerRespawn();
+          handlePlayerRespawn();//handle if the player is in the blast
         }
       }
 
@@ -599,24 +603,24 @@ void startGame() {
         }
       }
 
-      exist = false;
-      if (allowSound) {
+      exist = false;//reset the flag for the bomb
+      if (allowSound) {//if the player allowed sound play the bomb sound
         playBombSound();
       }
-      if (allowFasterBombs) {
+      if (allowFasterBombs) {//extra difficulty setting for the player.
         points += 2;
       }
       updateMatrix();
     }
 
     if (matrixChanged) {
-      updateMatrix();
+      updateMatrix();//update the matrix again for the bomb explotion
       matrixChanged = false;
     }
 
-    blink(xPos, yPos);
+    blink(xPos, yPos);//blink the player current position
 
-    if (lives == 0) {
+    if (lives == 0) {//if the player runs out of lives end the game and set highscores.
       exitGame = true;
       if (points > highScore3rd) {
         beatenHighScore = 3;
@@ -699,9 +703,10 @@ void startGame() {
       }
       lcd.clear();
     }
+    //Here if the player finished a map, clear the map, advance the level counter, generate a new map.
     if (areAllLedsOff(xPos, yPos)) {
       copyMatrix = false;
-
+      //redo highscores, no reason to do it on every bomb, you can just do it at the end of a level or if the player dies, if you exit the game it does not save the highscore
       if (points > highScore3rd) {
         beatenHighScore = 3;
         if (points > highScore2nd) {
@@ -711,7 +716,7 @@ void startGame() {
           }
         }
       }
-
+      //only update if the player hit a highscore
       if (beatenHighScore > 0) {
         lcd.clear();
         lcd.print(F("You beat the:"));
@@ -798,6 +803,7 @@ void startGame() {
       }
     }
   }
+  //at the end of the game update the values to EEPROM.
   EEPROM.write(8, highScore1st >> 8);
   EEPROM.write(9, highScore1st & 0xFF);
   EEPROM.write(10, highScore2nd >> 8);
@@ -807,12 +813,13 @@ void startGame() {
   lc.clearDisplay(0);
 }
 
+//Read the highscore from 2 eeprom adresses
 int readHighScore(int address) {
   int highByte = EEPROM.read(address);
   int lowByte = EEPROM.read(address + 1);
   return (highByte << 8) | lowByte;
 }
-
+//if the player dies go back to spawn, lose points, reset bomb values and last values as well.
 void handlePlayerRespawn() {
   yPos = 0;
   xPos = 0;
@@ -828,9 +835,9 @@ void handlePlayerRespawn() {
   exist = false;
   lcd.clear();
 }
-
+//Function to generate the map based on the difficulty, if fasterbombs is on, also make the game more difficult as the player clears levels.
 void generateMap() {
-  int maxBlocks;
+  int maxBlocks;//counter for how many blocks to place
   if (selectedDifficulty < 4) {
     maxBlocks = 20 + levels * 8;
     if (allowFasterBombs) {
@@ -868,7 +875,7 @@ void generateMap() {
   }
 }
 
-//Game Options
+//Game Options, here the player selects between difficulty and fasterbombs, also has an exit it is a submenu of settings.
 void handleGameOptions() {
   lcd.clear();
   subMenu = 5;
@@ -910,7 +917,7 @@ void handleGameOptions() {
     }
   }
 }
-
+//Display on the lcd the setting for the game options
 void displayGameOptions() {
   if (subMenu < 1) subMenu = 3;
   if (subMenu > 3 && subMenu != 5) {
@@ -942,7 +949,7 @@ void displayGameOptions() {
       lcd.write((uint8_t)0);  //up arrow
   }
 }
-
+//execute that said option
 void executeGameMenuAction() {
   switch (subMenu) {
     case 1:
@@ -962,7 +969,7 @@ void executeGameMenuAction() {
       break;
   }
 }
-
+//Here the player uses the up/down of the joystick to select difficulty level
 void chooseDifficulty() {
   lcd.clear();
   lcd.print("1-Hard, 10-Easy");
@@ -972,7 +979,7 @@ void chooseDifficulty() {
   boolean exitThis = false;
   while (exitThis == false) {
     int joyValue = analogRead(xPin);
-    if (!digitalRead(joyStickBtn)) {
+    if (!digitalRead(joyStickBtn)) { //only after the player presse the confirm button (the joystick button) will the option be saved.
       exitThis = true;
     }
     if (joyValue < minThreshold) {
@@ -1023,7 +1030,7 @@ void chooseDifficulty() {
   delay(500);
 }
 
-
+//The same as the chooseDifficulty menu, all the menues where you have to select a value are done the same, here is just yes/no compared to selecting a value from a range.
 void allowBombTime() {
   lcd.clear();
   lcd.print(F("Fast bombs?:"));
@@ -1073,7 +1080,7 @@ void executeMatrixMenuAction() {
       break;
   }
 }
-
+//The same as the chooseDifficulty menu, all the menues where you have to select a value are done the same.
 void chooseLightLevelMatrix() {
   lcd.clear();
   lcd.print(F("Set Brightness"));
@@ -1119,7 +1126,7 @@ void chooseLightLevelMatrix() {
   delay(500);
   lc.clearDisplay(0);
 }
-
+//Set on the matrix.
 void matrixLight() {
   for (int row = 0; row < matrixSize; row++) {
     for (int col = 0; col < matrixSize; col++) {
@@ -1128,23 +1135,7 @@ void matrixLight() {
   }
 }
 
-
-void executeLcdMenuAction() {
-  switch (subMenu) {
-    case 1:
-      chooseLightLevelLcd();
-      break;
-    case 2:
-      exitMenu = true;
-      break;
-    case 4:
-      lcd.clear();
-      lcd.print("LOADING...");
-      delay(400);
-      subMenu = 1;
-      break;
-  }
-}
+//The same as the chooseDifficulty menu, all the menues where you have to select a value are done the same.
 
 void chooseLightLevelLcd() {
   lcd.clear();
@@ -1231,7 +1222,7 @@ void handleSoundOptions() {
     }
   }
 }
-
+//The display for the sound option.
 void displaySoundOptions() {
   if (subMenu < 1) subMenu = 2;
   if (subMenu > 2 && subMenu != 4) {
@@ -1308,82 +1299,8 @@ void chooseSoundOption() {
   EEPROM.write(7, allowSound);
   delay(150);
 }
-void handleHighScoreOptions() {
-  lcd.clear();
-  subMenu = 4;
-  exitMenu = false;
-  displayHighScoreOptions();
 
-  while (!exitMenu) {
-    int joyValue = analogRead(xPin);
-
-    if (joyValue < minThreshold) {
-      subMenu++;
-      displayHighScoreOptions();
-      delay(debounceDelay);
-      while (analogRead(xPin) < minThreshold)
-        ;
-    }
-
-    if (joyValue > maxThreshold) {
-      subMenu--;
-      displayHighScoreOptions();
-      delay(debounceDelay);
-      while (analogRead(xPin) > maxThreshold)
-        ;
-    }
-
-    if (!digitalRead(pinSW)) {
-      executeHighScoreMenuAction();
-      delay(debounceDelay);
-      displayHighScoreOptions();
-      delay(debounceDelay);
-      while (!digitalRead(pinSW))
-        ;
-    }
-  }
-}
-
-void displayHighScoreOptions() {
-  if (subMenu < 1) subMenu = 2;
-  if (subMenu > 2 && subMenu != 4) {
-    subMenu = 1;
-  }
-  if (subMenu > 4) subMenu = 1;
-
-  lcd.clear();
-
-  switch (subMenu) {
-    case 1:
-      lcd.print(">Confirm Reset");
-      lcd.setCursor(0, 1);
-      lcd.print(" EXIT");
-      break;
-    case 2:
-      lcd.print(" Confirm Reset");
-      lcd.setCursor(0, 1);
-      lcd.print(">EXIT");
-      break;
-  }
-}
-
-void executeHighScoreMenuAction() {
-  switch (subMenu) {
-    case 1:
-      chooseHighScoreOption();
-      break;
-    case 2:
-      exitMenu = true;
-      break;
-    case 4:
-      lcd.clear();
-      lcd.print("LOADING...");
-      delay(400);
-      subMenu = 1;
-      break;
-  }
-}
-
+//Reset the highscores, add 3 values this was done for testing how the highscores work.
 void chooseHighScoreOption() {
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -1412,7 +1329,7 @@ void chooseHighScoreOption() {
 
 
 
-
+//The player uses up/down to change the current letter position, and right/left to change the value of the letter. you start on position 1, go up -> position 2 -> go right form A -> B;
 void handleChooseName() {
   bool exitThis = false;
   lcd.clear();
@@ -1454,7 +1371,7 @@ void handleChooseName() {
   }
 }
 
-//Credits
+//Show the credits made using delay and scroll.
 void showCredits() {
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -1493,7 +1410,6 @@ void updateMatrix() {
   }
 }
 
-
 void playBombSound() {
   tone(buzzerPin, 800, 350);  //bomb sound
 }
@@ -1501,6 +1417,7 @@ void playBombSound() {
 void playMenuSound() {
   tone(buzzerPin, 500, 200);
 }
+//update the current map with the new player location, this can happen only in one direction, (up/down or left/right)
 void updatePositions() {
   bool hasMoved = false;
 
@@ -1524,12 +1441,12 @@ void updatePositions() {
     newYPos--;
     hasMoved = true;
   }
-
+//update the current map
   if (tempMap[newXPos][newYPos] == 0 && hasMoved) {
     matrixChanged = true;
     tempMap[xPos][yPos] = 0;
     tempMap[newXPos][newYPos] = 1;
-    xLast = xPos;
+    xLast = xPos; //change the last positions
     yLast = yPos;
     xPos = newXPos;
     yPos = newYPos;
@@ -1537,7 +1454,7 @@ void updatePositions() {
     hasMoved = false;
   }
 }
-
+//Blink for the player i turn the current position on and off, on a specified interval
 void blink(byte x, byte y) {
   static unsigned long lastBlinkTime = 0;
   static bool isOn = true;
@@ -1549,6 +1466,7 @@ void blink(byte x, byte y) {
     lastBlinkTime = millis();
   }
 }
+//Blink for the bomb
 void blinkFast(byte x, byte y) {
   static unsigned long lastBlinkTime = 0;
   static bool isOn = true;
@@ -1560,7 +1478,7 @@ void blinkFast(byte x, byte y) {
     lastBlinkTime = millis();
   }
 }
-
+//Function to check if the map is finished (the player destroyed all the walls, and ignore his currentPosition)
 bool areAllLedsOff(byte ignoreX, byte ignoreY) {
   for (int row = 0; row < 8; row++) {
     for (int col = 0; col < 8; col++) {
@@ -1572,7 +1490,7 @@ bool areAllLedsOff(byte ignoreX, byte ignoreY) {
   return true;
 }
 
-
+//If the player enetres the showHighScore menu present all the highscores in order
 void showHighScores() {
   char nameBuffer[nameLength + 1];
 
@@ -1607,7 +1525,7 @@ void showHighScores() {
   delay(1500);
 }
 
-
+//Start the tutorial
 void showHowToPlay() {
   //classic video game teach fundementals
   lcd.setCursor(0, 0);
@@ -1618,14 +1536,14 @@ void showHowToPlay() {
   yPos = 4;
   generateTutorial();
   updateMatrix();
-
+//Wait for the player to move in the said direction, the player in the movment selection cannot place bombs
   while (count < 3) {
 
     if (millis() - lastMoved >= moveInterval) {
       xLast = xPos;
       yLast = yPos;
-      updatePositions();
-      if (xLast < xPos) {
+      updatePositions(); //once the player moved update the position
+      if (xLast < xPos) { //if the player moved up
         count++;
       }
       lastMoved = millis();
@@ -1645,8 +1563,8 @@ void showHowToPlay() {
     if (millis() - lastMoved >= moveInterval) {
       xLast = xPos;
       yLast = yPos;
-      updatePositions();
-      if (xLast > xPos) {
+      updatePositions(); 
+      if (xLast > xPos) {  //if the player moved down
         count++;
       }
       lastMoved = millis();
@@ -1667,7 +1585,7 @@ void showHowToPlay() {
       xLast = xPos;
       yLast = yPos;
       updatePositions();
-      if (yLast < yPos) {
+      if (yLast < yPos) { //if the player moved left
         count++;
       }
       lastMoved = millis();
@@ -1679,7 +1597,6 @@ void showHowToPlay() {
     }
     blink(xPos, yPos);
   }
-  // Instructions for moving right
   lcd.clear();
   lcd.print("Move > 3 times");
 
@@ -1689,7 +1606,7 @@ void showHowToPlay() {
       xLast = xPos;
       yLast = yPos;
       updatePositions();
-      if (yLast > yPos) {
+      if (yLast > yPos) { //if the player moved right.
         count++;
       }
       lastMoved = millis();
@@ -1710,7 +1627,7 @@ void showHowToPlay() {
   count = 0;
 
 
-
+//Here the player has to destroy the walls in order to advance.
   while (count < 3) {
     bool buttonPressed = digitalRead(pinSW);
     if (millis() - lastMoved >= moveInterval) {
@@ -1742,7 +1659,7 @@ void showHowToPlay() {
         tempMap[xBlink - 1][yBlink] = 0;
         lc.setLed(1, xBlink - 1, yBlink, tempMap[xBlink - 1][yBlink]);
 
-        if (xPos == xBlink - 1 && yBlink == yPos) {
+        if (xPos == xBlink - 1 && yBlink == yPos) { //if the player blows himself up go back to spawn
           xPos = 4;
           yPos = 4;
           count--;
@@ -1756,12 +1673,12 @@ void showHowToPlay() {
 
       if (xBlink < (8 - 1)) {
         if (tempMap[xBlink + 1][yBlink] == 1) {
-          count++;
+          count++; //if the player blows a wall update counter.
         }
         tempMap[xBlink + 1][yBlink] = 0;
         lc.setLed(1, xBlink + 1, yBlink, tempMap[xBlink + 1][yBlink]);
 
-        if (xPos == xBlink + 1 && yBlink == yPos) {
+        if (xPos == xBlink + 1 && yBlink == yPos) { //if the player blows himself up go back to spawn
           xPos = 4;
           yPos = 4;
           count--;
@@ -1780,7 +1697,7 @@ void showHowToPlay() {
         tempMap[xBlink][yBlink - 1] = 0;
         lc.setLed(1, xBlink, yBlink - 1, tempMap[xBlink][yBlink - 1]);
 
-        if (xPos == xBlink && yBlink - 1 == yPos) {
+        if (xPos == xBlink && yBlink - 1 == yPos) { //if the player blows himself up go back to spawn
           xPos = 4;
           yPos = 4;
           count--;
@@ -1799,7 +1716,7 @@ void showHowToPlay() {
         tempMap[xBlink][yBlink + 1] = 0;
         lc.setLed(1, xBlink, yBlink + 1, tempMap[xBlink][yBlink + 1]);
 
-        if (xPos == xBlink && yBlink + 1 == yPos) {
+        if (xPos == xBlink && yBlink + 1 == yPos) { //if the player blows himself up go back to spawn
           xPos = 4;
           yPos = 4;
           count--;
@@ -1815,7 +1732,7 @@ void showHowToPlay() {
       if (allowSound) {
         playBombSound();
       }
-      updateMatrix();
+      updateMatrix();//update after the bomb exploded.
     }
 
     if (matrixChanged) {
@@ -1832,7 +1749,7 @@ void showHowToPlay() {
   delay(1500);
   lcd.clear();
 }
-
+//Generate tutorial map, i set all the values to 0 and add the corners
 void generateTutorial() {
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
@@ -1844,25 +1761,28 @@ void generateTutorial() {
   tempMap[7][0] = 1;
   tempMap[0][7] = 1;
 }
+// Save the player's name to EEPROM
 
 void saveNameToEEPROM() {
   for (int i = 0; i < 3; ++i) {
     EEPROM.write(20 + i, currentPlayerName[i]);
   }
 }
-
+// Load the player's name from EEPROM
 void loadNameFromEEPROM() {
   for (int i = 0; i < 3; ++i) {
     currentPlayerName[i] = EEPROM.read(20 + i);
   }
   currentPlayerName[3] = '\0';
 }
-//should have done with address on all..
+
+  // Save a high score name from the specified EEPROM address
 void saveHighScoreNameToEEPROM(int address, const char* name) {
   for (int i = 0; i < nameLength; ++i) {
     EEPROM.write(address + i, name[i]);
   }
 }
+// Read a high score name from the specified EEPROM address
 void loadHighScoreNameToEEPROM(int address, char* name) {
   for (int i = 0; i < nameLength; ++i) {
     name[i] = EEPROM.read(address + i);
