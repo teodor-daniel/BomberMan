@@ -1,8 +1,4 @@
-/*
-Regrettably, this program relies on 'delay' and blocking 'while' loops, potentially impeding multitasking and responsiveness due to global scope obstruction. However, within this particular application, the absence of multitasking aligns with the design intent, as each section operates autonomously, ensuring a methodical progression from one task to the next. This approach fosters a deliberate and orderly execution, befitting the game's straightforward and linear nature.
-Acknowledging the  recurrent use of variables,  especially in controller initialization it's important to note that this strategy was deliberately employed to reduce complexity and uphold a uniform code structure 
-Moreover, current memory utilization stands at 58%, indicating a moderate consumption level. Introducing a more complex system of flags to track the player's menu position could unnecessarily inflate variable usage and memory demand. The chosen methodology, therefore, strikes a balance between functionality and resource efficiency, offering a pragmatic solution for the game's scale and scope.
- */
+
 
 #include <EEPROM.h>
 #include "LedControl.h"
